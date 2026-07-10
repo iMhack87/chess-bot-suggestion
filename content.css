@@ -1,0 +1,139 @@
+/* Couche de flèches sur l'échiquier */
+svg.sfa-arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9;
+}
+
+.sfa-arrow {
+  stroke: #2bb3a3;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.sfa-arrowhead {
+  fill: #2bb3a3;
+  opacity: 0.85;
+}
+
+/* Panneau flottant */
+.sfa-panel {
+  position: fixed;
+  top: 90px;
+  right: 16px;
+  width: 220px;
+  z-index: 2147483646;
+  background: #1e1e1c;
+  color: #eee;
+  border: 1px solid #3a3a38;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.sfa-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #262624;
+  border-bottom: 1px solid #3a3a38;
+}
+
+.sfa-title {
+  font-weight: 600;
+}
+
+.sfa-body {
+  padding: 10px;
+}
+
+.sfa-move {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2bb3a3;
+  min-height: 30px;
+}
+
+.sfa-off .sfa-move {
+  color: #777;
+}
+
+.sfa-eval {
+  color: #bbb;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.sfa-depth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: #bbb;
+}
+
+.sfa-depth {
+  background: #262624;
+  color: #eee;
+  border: 1px solid #3a3a38;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.sfa-note {
+  padding: 6px 10px 8px;
+  color: #8a8a88;
+  font-size: 11px;
+  border-top: 1px solid #3a3a38;
+}
+
+/* Interrupteur */
+.sfa-switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 19px;
+}
+
+.sfa-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sfa-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #555;
+  border-radius: 19px;
+  transition: background 0.15s;
+}
+
+.sfa-slider::before {
+  content: "";
+  position: absolute;
+  height: 15px;
+  width: 15px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.sfa-switch input:checked + .sfa-slider {
+  background: #2bb3a3;
+}
+
+.sfa-switch input:checked + .sfa-slider::before {
+  transform: translateX(15px);
+}
