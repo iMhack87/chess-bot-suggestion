@@ -45,12 +45,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: true }); // accusé de réception pour le diagnostic côté content
     ensureOffscreen()
       .then(() => {
-        chrome.runtime.sendMessage({
-          target: "offscreen",
-          type: "analyze",
-          fen: msg.fen,
-          depth: msg.depth,
-        });
+        chrome.runtime.sendMessage(
+          {
+            target: "offscreen",
+            type: "analyze",
+            fen: msg.fen,
+            depth: msg.depth,
+          },
+          (resp) => {
+            const err = chrome.runtime.lastError;
+            if (!resp || resp.from !== "offscreen") {
+              reportToTab({
+                target: "content",
+                type: "engine-error",
+                message:
+                  "offscreen muet : " +
+                  (err ? err.message : "pas de réponse (document absent ou script en erreur)"),
+              });
+            }
+          }
+        );
       })
       .catch((err) => {
         reportToTab({

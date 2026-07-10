@@ -13,13 +13,22 @@ function sendToContent(payload) {
   chrome.runtime.sendMessage(Object.assign({ target: "content" }, payload));
 }
 
+let sawFirstLine = false;
+
 function ensureWorker() {
   if (worker) return;
   worker = new Worker("vendor/stockfish.wasm.js");
-  worker.onmessage = (e) => onEngineLine(String(e.data));
-  worker.onerror = (e) => {
-    sendToContent({ type: "engine-error", message: String(e.message || e) });
+  worker.onmessage = (e) => {
+    if (!sawFirstLine) {
+      sawFirstLine = true;
+      sendToContent({ type: "engine-status", message: "moteur : première ligne reçue" });
+    }
+    onEngineLine(String(e.data));
   };
+  worker.onerror = (e) => {
+    sendToContent({ type: "engine-error", message: "worker : " + String(e.message || e) });
+  };
+  sendToContent({ type: "engine-status", message: "worker créé, uci envoyé" });
   worker.postMessage("uci");
 }
 
@@ -87,8 +96,9 @@ function maybeStart() {
   worker.postMessage("go depth " + current.depth);
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.target !== "offscreen") return;
+  sendResponse({ ok: true, from: "offscreen" }); // ack pour le diagnostic
   if (msg.type === "analyze" && typeof msg.fen === "string") {
     try {
       ensureWorker();

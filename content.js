@@ -358,6 +358,12 @@
       if (msg.type === "analysis") onAnalysis(msg);
       else if (msg.type === "engine-error")
         setPanelMove("Erreur moteur", msg.message || "");
+      else if (msg.type === "engine-status") {
+        console.info("[Coach amical]", msg.message);
+        const evalEl = panel && panel.querySelector(".sfa-eval");
+        if (evalEl && evalEl.textContent === "analyse en cours")
+          evalEl.textContent = msg.message;
+      }
     });
 
     const observer = new MutationObserver(scheduleScan);
