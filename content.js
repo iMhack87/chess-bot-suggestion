@@ -278,15 +278,22 @@
   // Analyse
   // ---------------------------------------------------------------------
 
+  let lastRequestAt = 0;
+  let awaitingResult = false;
+
   function requestAnalysis(fen) {
+    lastRequestAt = Date.now();
+    awaitingResult = true;
     setPanelMove("…", "analyse en cours");
     chrome.runtime.sendMessage(
       { target: "background", type: "analyze", fen, depth },
-      () => {
+      (resp) => {
         if (chrome.runtime.lastError) {
           const m = chrome.runtime.lastError.message || "erreur inconnue";
           console.warn("[Coach amical] relais background :", m);
           setPanelMove("Erreur relais", m);
+        } else if (resp) {
+          console.info("[Coach amical] ack SW :", JSON.stringify(resp));
         }
       }
     );
@@ -321,6 +328,7 @@
 
   function onAnalysis(msg) {
     if (!enabled || msg.fen !== lastFen) return; // résultat obsolète
+    awaitingResult = false;
     const board = findBoard();
     if (!board) return;
     drawArrow(board, msg.move);
@@ -337,7 +345,13 @@
     const pos = readPosition();
     if (!pos) return;
     buildPanel();
-    if (pos.fen === lastFen) return;
+    if (pos.fen === lastFen) {
+      // Relance si l'analyse semble perdue (offscreen gelé, message égaré…).
+      if (enabled && awaitingResult && Date.now() - lastRequestAt > 8000) {
+        requestAnalysis(lastFen);
+      }
+      return;
+    }
     lastFen = pos.fen;
     clearArrow(pos.board);
     if (pos.game && pos.game.game_over()) {
