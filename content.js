@@ -131,10 +131,16 @@
   function readPosition() {
     const board = findBoard();
     if (!board) return null;
-    const moves = sanMovesFromDOM();
-    if (moves) {
-      const r = fenFromMoves(moves);
-      if (r) return Object.assign(r, { board });
+    // Si chess.js casse (chargement, SAN inattendu…), on retombe sur le
+    // scan des pièces plutôt que de planter tout le content script.
+    try {
+      const moves = sanMovesFromDOM();
+      if (moves) {
+        const r = fenFromMoves(moves);
+        if (r) return Object.assign(r, { board });
+      }
+    } catch (e) {
+      console.warn("[Coach amical] lecture des coups impossible :", e);
     }
     const fallback = fenFromPieces(board);
     return fallback ? Object.assign(fallback, { board }) : null;

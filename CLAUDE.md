@@ -28,4 +28,10 @@ chess.js 0.13.4 (UMD).
   UCI). Sous Node (smoke-test), lancer depuis `vendor/` et patcher
   `global.fetch`/`postMessage` — voir l'historique de test.
 - chess.js 0.13.4 : API `game_over()`, `move(san, {sloppy:true})` (pas l'API 1.x).
+- `vendor/chess.js` est PATCHÉ localement : les builds cdnjs 0.13.4 (min et non-min)
+  sont des modules ES (`export`) → SyntaxError silencieuse en content script
+  (`Chess is not defined`). Patch : `export const` → `var` + footer CJS pour les
+  tests Node. Ne pas re-télécharger sans réappliquer.
+- Après toute modif des fichiers, RECHARGER l'extension (chrome://extensions,
+  flèche ⟳ sur la carte) avant de tester : Chrome sert l'ancienne version sinon.
 - Un seul onglet analysé à la fois (background garde `lastTabId`).
