@@ -6,26 +6,37 @@ amicales, accord des deux joueurs — rappel affiché dans l'UI, à conserver).
 ## Commandes
 
 - Tests logique : `node test/logic.test.js` (doit finir exit 0)
-- Syntaxe : `node --check content.js background.js offscreen.js`
-- Test E2E : charger le dossier via `chrome://extensions` (mode développeur,
-  « Charger l'extension non empaquetée »), ouvrir une partie chess.com.
+- Syntaxe : `node --check content.js engine-sw.js`
+- E2E : partie vs bot sur chess.com/play/computer, vérifier panneau + flèche.
 - Pas de build ni de déploiement : le dossier EST l'extension.
 
 ## Architecture
 
-content.js (lit les coups, dessine) → background.js (service worker, relais)
-→ offscreen.html/js (Worker Stockfish, UCI). `vendor/` est committé :
-stockfish.wasm.js + stockfish.wasm (build lichess 10.0.2, mono-thread) et
-chess.js 0.13.4 (UMD).
+content.js (liste de coups → FEN via chess.js, flèche SVG + panneau)
+↔ engine-sw.js (service worker : Stockfish asm.js chargé par importScripts,
+UCI en direct, recherche synchrone bornée par movetime). `vendor/` committé :
+stockfish.asm.js (10, build 2019 lichess, pur JS) et chess.js 0.13.4 patché.
 
-## Pièges connus
+## Pièges connus (tous vécus — ne pas re-découvrir)
 
-- Les sélecteurs DOM chess.com changent régulièrement : la liste des coups
-  est cherchée via plusieurs sélecteurs dans `sanMovesFromDOM()` (content.js).
-  Si les suggestions ne suivent plus la partie, commencer par là.
-- Le CSP `wasm-unsafe-eval` dans manifest.json est indispensable au WASM.
-- Le build Stockfish s'utilise comme script de Worker (postMessage de chaînes
-  UCI). Sous Node (smoke-test), lancer depuis `vendor/` et patcher
-  `global.fetch`/`postMessage` — voir l'historique de test.
-- chess.js 0.13.4 : API `game_over()`, `move(san, {sloppy:true})` (pas l'API 1.x).
-- Un seul onglet analysé à la fois (background garde `lastTabId`).
+- **`setoption name Threads value 1` PEND ce build Stockfish** (boucle infinie).
+  Ne jamais envoyer de setoption Threads/Hash ; uci → isready → go suffit.
+- **Recherche synchrone dans le SW** : toujours borner par `movetime` (≤ 4 s),
+  sinon le SW bloque puis est tué par Chrome (~30 s) sans erreur visible.
+- **Pas de moteur en Web Worker ni en document offscreen** : Chrome gèle
+  timers/MessageChannel/tâches DOM de ces contextes de façon imprévisible.
+  Seuls le SW (pendant un événement) et chrome.runtime sont fiables.
+- **Sortie moteur = print synchrone pendant le ccall** : mettre en file et
+  vider en microtâche, jamais rappeler le moteur depuis son propre print.
+- **Chrome ne recharge PAS le script d'un SW d'extension non empaquetée**
+  (ni au redémarrage, ni au bump de version) : renommer le fichier du SW
+  (+ le manifest) à chaque modif, ou recharger via chrome://extensions.
+- Recharge complète de l'extension sans clic : quitter/relancer Chrome
+  (AppleScript) — content scripts et pages relus, SW seulement si renommé.
+- `vendor/chess.js` est PATCHÉ (builds cdnjs = modules ES → SyntaxError en
+  content script) : `export const` → `var` + footer CJS pour les tests Node.
+- chess.js 0.13.4 : API `game_over()`, `move(san, {sloppy:true})` (pas la 1.x).
+- Sélecteurs DOM chess.com fragiles : voir `sanMovesFromDOM()` (content.js),
+  gérer les figurines via `[data-figurine]`.
+- Un seul onglet analysé à la fois (`lastTabId` dans le SW) ; le content
+  script relance l'analyse si pas de réponse en 8 s (SW froid ou message perdu).

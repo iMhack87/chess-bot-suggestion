@@ -32,9 +32,11 @@ panneau flottant avec le coup en notation, l'évaluation et la profondeur.
   la position avec **chess.js** (FEN complet : trait, roques, en passant),
   et dessine la suggestion. Plan B si la liste des coups est introuvable :
   scan des pièces sur l'échiquier.
-- `background.js` (service worker) crée un **document offscreen** qui héberge
-  **Stockfish 10 (WebAssembly, build lichess)** dans un Web Worker et relaie
-  les messages UCI. Tout tourne en local, aucune donnée ne sort du navigateur.
+- `engine-sw.js` (service worker) héberge **Stockfish 10 (build asm.js, pur
+  JavaScript)** chargé par `importScripts` et parle UCI en direct — recherche
+  synchrone bornée dans le temps. Tout tourne en local, aucune donnée ne
+  sort du navigateur. (Pourquoi pas de Web Worker ni de document offscreen :
+  Chrome gèle leurs timers et files de tâches — voir CLAUDE.md.)
 
 ## Tests
 
@@ -42,9 +44,7 @@ panneau flottant avec le coup en notation, l'évaluation et la profondeur.
 node test/logic.test.js   # nettoyage SAN, FEN, UCI→SAN, coordonnées flèche
 ```
 
-Smoke-test moteur (depuis `vendor/`) : voir `CLAUDE.md`.
-
 ## Licence des dépendances
 
 - [stockfish.js](https://github.com/niklasf/stockfish.js) — GPL-3.0
-- [chess.js](https://github.com/jhlywa/chess.js) 0.13.4 — BSD-2-Clause
+- [chess.js](https://github.com/jhlywa/chess.js) 0.13.4 — BSD-2-Clause (patché : voir CLAUDE.md)
