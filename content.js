@@ -280,7 +280,16 @@
 
   function requestAnalysis(fen) {
     setPanelMove("…", "analyse en cours");
-    chrome.runtime.sendMessage({ target: "background", type: "analyze", fen, depth });
+    chrome.runtime.sendMessage(
+      { target: "background", type: "analyze", fen, depth },
+      () => {
+        if (chrome.runtime.lastError) {
+          const m = chrome.runtime.lastError.message || "erreur inconnue";
+          console.warn("[Coach amical] relais background :", m);
+          setPanelMove("Erreur relais", m);
+        }
+      }
+    );
   }
 
   // Convertit un coup UCI (e2e4, e7e8q) en SAN lisible pour la position donnée.

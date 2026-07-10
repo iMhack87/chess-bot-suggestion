@@ -90,7 +90,12 @@ function maybeStart() {
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target !== "offscreen") return;
   if (msg.type === "analyze" && typeof msg.fen === "string") {
-    ensureWorker();
+    try {
+      ensureWorker();
+    } catch (e) {
+      sendToContent({ type: "engine-error", message: "worker: " + String(e && e.message ? e.message : e) });
+      return;
+    }
     pending = { fen: msg.fen, depth: Number(msg.depth) || 15 };
     if (busy) {
       worker.postMessage("stop"); // le bestmove qui suit relancera maybeStart()

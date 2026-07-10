@@ -30,22 +30,36 @@ async function ensureOffscreen() {
 // Onglet ayant émis la dernière demande d'analyse (une partie à la fois).
 let lastTabId = null;
 
-chrome.runtime.onMessage.addListener((msg, sender) => {
+function reportToTab(payload) {
+  if (lastTabId == null) return;
+  chrome.tabs.sendMessage(lastTabId, payload).catch(() => {
+    // L'onglet a pu être fermé entre-temps.
+  });
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.target) return;
 
   if (msg.target === "background" && msg.type === "analyze") {
     if (sender.tab) lastTabId = sender.tab.id;
-    ensureOffscreen().then(() => {
-      chrome.runtime.sendMessage({
-        target: "offscreen",
-        type: "analyze",
-        fen: msg.fen,
-        depth: msg.depth,
+    sendResponse({ ok: true }); // accusé de réception pour le diagnostic côté content
+    ensureOffscreen()
+      .then(() => {
+        chrome.runtime.sendMessage({
+          target: "offscreen",
+          type: "analyze",
+          fen: msg.fen,
+          depth: msg.depth,
+        });
+      })
+      .catch((err) => {
+        reportToTab({
+          target: "content",
+          type: "engine-error",
+          message: "offscreen: " + String(err && err.message ? err.message : err),
+        });
       });
-    });
-  } else if (msg.target === "content" && lastTabId != null) {
-    chrome.tabs.sendMessage(lastTabId, msg).catch(() => {
-      // L'onglet a pu être fermé entre-temps.
-    });
+  } else if (msg.target === "content") {
+    reportToTab(msg);
   }
 });
