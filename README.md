@@ -24,7 +24,11 @@ panneau flottant avec le coup en notation, l'évaluation et la profondeur.
   affiche le coup en notation (ex. `Cf3`), l'évaluation côté Blancs et la
   profondeur atteinte.
 - L'interrupteur du panneau active/désactive les suggestions (mémorisé).
-- La profondeur d'analyse est réglable (12 rapide → 18 fort).
+- Le niveau est réglable — depuis le panneau **ou le popup de l'extension**
+  (clic sur l'icône dans la barre Chrome), synchronisés en direct :
+  **Maximum** (pleine force) ou bridé de **~1800 à ~1000 Elo** (option UCI
+  `Skill Level` + profondeur réduite — le moteur joue alors des coups
+  imparfaits, comme un humain). Le choix est mémorisé.
 
 ## Fonctionnement
 

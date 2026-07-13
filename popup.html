@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<style>
+  body {
+    width: 240px;
+    margin: 0;
+    background: #1e1e1c;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #262624;
+    border-bottom: 1px solid #3a3a38;
+    font-weight: 600;
+  }
+  .body { padding: 12px; }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  select {
+    background: #262624;
+    color: #eee;
+    border: 1px solid #3a3a38;
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-size: 13px;
+  }
+  .note {
+    padding: 8px 12px 10px;
+    color: #8a8a88;
+    font-size: 11px;
+    border-top: 1px solid #3a3a38;
+  }
+  .switch { position: relative; display: inline-block; width: 34px; height: 19px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #555; border-radius: 19px; transition: background 0.15s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 15px; width: 15px;
+    left: 2px; top: 2px; background: #fff; border-radius: 50%;
+    transition: transform 0.15s;
+  }
+  .switch input:checked + .slider { background: #2bb3a3; }
+  .switch input:checked + .slider::before { transform: translateX(15px); }
+</style>
+</head>
+<body>
+  <div class="head">
+    <span>♞ Coach amical</span>
+    <label class="switch">
+      <input type="checkbox" id="enabled" />
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="body">
+    <div class="row">
+      <span>Niveau</span>
+      <select id="level"></select>
+    </div>
+  </div>
+  <div class="note">
+    S'applique immédiatement à la partie en cours.<br />
+    Parties amicales uniquement — accord des deux joueurs.
+  </div>
+  <script src="levels.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

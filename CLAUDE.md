@@ -28,11 +28,13 @@ stockfish.asm.js (10, build 2019 lichess, pur JS) et chess.js 0.13.4 patché.
   Seuls le SW (pendant un événement) et chrome.runtime sont fiables.
 - **Sortie moteur = print synchrone pendant le ccall** : mettre en file et
   vider en microtâche, jamais rappeler le moteur depuis son propre print.
-- **Chrome ne recharge PAS le script d'un SW d'extension non empaquetée**
-  (ni au redémarrage, ni au bump de version) : renommer le fichier du SW
-  (+ le manifest) à chaque modif, ou recharger via chrome://extensions.
-- Recharge complète de l'extension sans clic : quitter/relancer Chrome
-  (AppleScript) — content scripts et pages relus, SW seulement si renommé.
+- **Rechargement d'une extension non empaquetée sans clic** (via
+  quitter/relancer Chrome par AppleScript) : les fichiers ne sont relus au
+  redémarrage QUE si le manifest a changé → bumper `version` à chaque
+  itération. Le script du SW est encore plus têtu : le RENOMMER
+  (+ manifest) à chaque modif. Sinon : clic ⟳ dans chrome://extensions.
+- `setoption name Skill Level` est sûr (retour immédiat), contrairement à
+  Threads/Hash. Niveaux Elo : voir LEVELS dans content.js (skill+depth).
 - `vendor/chess.js` est PATCHÉ (builds cdnjs = modules ES → SyntaxError en
   content script) : `export const` → `var` + footer CJS pour les tests Node.
 - chess.js 0.13.4 : API `game_over()`, `move(san, {sloppy:true})` (pas la 1.x).

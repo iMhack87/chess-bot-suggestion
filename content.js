@@ -11,7 +11,9 @@
   const SCAN_DEBOUNCE_MS = 350;
 
   let enabled = true;
-  let depth = 15;
+
+  // Niveaux de jeu : table partagée avec le popup (levels.js, chargé avant).
+  let level = "max";
   let lastFen = null; // dernière position analysée (les réponses d'une autre position sont ignorées)
   let panel = null;
   let scanTimer = null;
@@ -229,12 +231,8 @@
         <div class="sfa-move">—</div>
         <div class="sfa-eval"></div>
         <div class="sfa-depth-row">
-          <span>Profondeur</span>
-          <select class="sfa-depth">
-            <option value="12">12 (rapide)</option>
-            <option value="15">15</option>
-            <option value="18">18 (fort)</option>
-          </select>
+          <span>Niveau</span>
+          <select class="sfa-level"></select>
         </div>
       </div>
       <div class="sfa-note">Parties amicales uniquement — avec l'accord des deux joueurs.</div>
@@ -243,27 +241,23 @@
 
     const toggle = panel.querySelector(".sfa-toggle");
     toggle.checked = enabled;
+    // Écrit seulement dans le storage : storage.onChanged applique (ici et
+    // dans le popup — synchro bidirectionnelle).
     toggle.addEventListener("change", () => {
-      enabled = toggle.checked;
-      chrome.storage.local.set({ enabled });
-      if (!enabled) {
-        clearArrow();
-        setPanelMove("—", "");
-      } else {
-        lastFen = null; // force une nouvelle analyse
-        scheduleScan();
-      }
-      panel.classList.toggle("sfa-off", !enabled);
+      chrome.storage.local.set({ enabled: toggle.checked });
     });
     panel.classList.toggle("sfa-off", !enabled);
 
-    const depthSel = panel.querySelector(".sfa-depth");
-    depthSel.value = String(depth);
-    depthSel.addEventListener("change", () => {
-      depth = Number(depthSel.value);
-      chrome.storage.local.set({ depth });
-      lastFen = null;
-      scheduleScan();
+    const levelSel = panel.querySelector(".sfa-level");
+    SFA_LEVEL_ORDER.forEach((key) => {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = SFA_LEVELS[key].label;
+      levelSel.appendChild(opt);
+    });
+    levelSel.value = level;
+    levelSel.addEventListener("change", () => {
+      chrome.storage.local.set({ level: sfaNormalizeLevel(levelSel.value) });
     });
     return panel;
   }
@@ -285,8 +279,9 @@
     lastRequestAt = Date.now();
     awaitingResult = true;
     setPanelMove("…", "analyse en cours");
+    const lv = SFA_LEVELS[level] || SFA_LEVELS.max;
     chrome.runtime.sendMessage(
-      { target: "background", type: "analyze", fen, depth },
+      { target: "background", type: "analyze", fen, depth: lv.depth, skill: lv.skill },
       (resp) => {
         if (chrome.runtime.lastError) {
           const m = chrome.runtime.lastError.message || "erreur inconnue";
@@ -392,9 +387,42 @@
     scheduleScan();
   }
 
-  chrome.storage.local.get({ enabled: true, depth: 15 }, (v) => {
+  // Applique en direct les réglages venus du popup OU du panneau (les deux
+  // n'écrivent que dans le storage ; ce handler est l'unique application).
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (changes.level) {
+      const next = sfaNormalizeLevel(changes.level.newValue);
+      if (next !== level) {
+        level = next;
+        const sel = panel && panel.querySelector(".sfa-level");
+        if (sel) sel.value = level;
+        lastFen = null; // force une nouvelle analyse au nouveau niveau
+        scheduleScan();
+      }
+    }
+    if (changes.enabled) {
+      const next = Boolean(changes.enabled.newValue);
+      if (next !== enabled) {
+        enabled = next;
+        if (panel) {
+          panel.querySelector(".sfa-toggle").checked = enabled;
+          panel.classList.toggle("sfa-off", !enabled);
+        }
+        if (!enabled) {
+          clearArrow();
+          setPanelMove("—", "");
+        } else {
+          lastFen = null;
+          scheduleScan();
+        }
+      }
+    }
+  });
+
+  chrome.storage.local.get({ enabled: true, level: "max" }, (v) => {
     enabled = Boolean(v.enabled);
-    depth = Number(v.depth) || 15;
+    level = sfaNormalizeLevel(v.level);
     init();
   });
 })();
