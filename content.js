@@ -12,14 +12,7 @@
 
   let enabled = true;
 
-  // Niveaux de jeu : Skill Level Stockfish (0-20) + profondeur réduite.
-  // Correspondances Elo approximatives (« grosso modo »).
-  const LEVELS = {
-    max: { skill: 20, depth: 15, label: "Maximum" },
-    1600: { skill: 8, depth: 10, label: "~1600 Elo" },
-    1300: { skill: 4, depth: 8, label: "~1300 Elo" },
-    1000: { skill: 1, depth: 5, label: "~1000 Elo" },
-  };
+  // Niveaux de jeu : table partagée avec le popup (levels.js, chargé avant).
   let level = "max";
   let lastFen = null; // dernière position analysée (les réponses d'une autre position sont ignorées)
   let panel = null;
@@ -239,12 +232,7 @@
         <div class="sfa-eval"></div>
         <div class="sfa-depth-row">
           <span>Niveau</span>
-          <select class="sfa-level">
-            <option value="max">Maximum</option>
-            <option value="1600">~1600 Elo</option>
-            <option value="1300">~1300 Elo</option>
-            <option value="1000">~1000 Elo</option>
-          </select>
+          <select class="sfa-level"></select>
         </div>
       </div>
       <div class="sfa-note">Parties amicales uniquement — avec l'accord des deux joueurs.</div>
@@ -253,29 +241,23 @@
 
     const toggle = panel.querySelector(".sfa-toggle");
     toggle.checked = enabled;
+    // Écrit seulement dans le storage : storage.onChanged applique (ici et
+    // dans le popup — synchro bidirectionnelle).
     toggle.addEventListener("change", () => {
-      enabled = toggle.checked;
-      chrome.storage.local.set({ enabled });
-      if (!enabled) {
-        clearArrow();
-        setPanelMove("—", "");
-      } else {
-        lastFen = null; // force une nouvelle analyse
-        scheduleScan();
-      }
-      panel.classList.toggle("sfa-off", !enabled);
+      chrome.storage.local.set({ enabled: toggle.checked });
     });
     panel.classList.toggle("sfa-off", !enabled);
 
     const levelSel = panel.querySelector(".sfa-level");
+    SFA_LEVEL_ORDER.forEach((key) => {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = SFA_LEVELS[key].label;
+      levelSel.appendChild(opt);
+    });
     levelSel.value = level;
-    if (levelSel.value !== level) levelSel.selectedIndex = 0; // valeur inconnue → Maximum
-    levelSel.addEventListener("change", (e) => {
-      console.info("[Coach amical] change niveau:", levelSel.value, "isTrusted:", e.isTrusted);
-      level = String(levelSel.value) in LEVELS ? String(levelSel.value) : "max";
-      chrome.storage.local.set({ level });
-      lastFen = null; // force une nouvelle analyse au nouveau niveau
-      scheduleScan();
+    levelSel.addEventListener("change", () => {
+      chrome.storage.local.set({ level: sfaNormalizeLevel(levelSel.value) });
     });
     return panel;
   }
@@ -297,7 +279,7 @@
     lastRequestAt = Date.now();
     awaitingResult = true;
     setPanelMove("…", "analyse en cours");
-    const lv = LEVELS[level] || LEVELS.max;
+    const lv = SFA_LEVELS[level] || SFA_LEVELS.max;
     chrome.runtime.sendMessage(
       { target: "background", type: "analyze", fen, depth: lv.depth, skill: lv.skill },
       (resp) => {
@@ -405,12 +387,42 @@
     scheduleScan();
   }
 
+  // Applique en direct les réglages venus du popup OU du panneau (les deux
+  // n'écrivent que dans le storage ; ce handler est l'unique application).
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (changes.level) {
+      const next = sfaNormalizeLevel(changes.level.newValue);
+      if (next !== level) {
+        level = next;
+        const sel = panel && panel.querySelector(".sfa-level");
+        if (sel) sel.value = level;
+        lastFen = null; // force une nouvelle analyse au nouveau niveau
+        scheduleScan();
+      }
+    }
+    if (changes.enabled) {
+      const next = Boolean(changes.enabled.newValue);
+      if (next !== enabled) {
+        enabled = next;
+        if (panel) {
+          panel.querySelector(".sfa-toggle").checked = enabled;
+          panel.classList.toggle("sfa-off", !enabled);
+        }
+        if (!enabled) {
+          clearArrow();
+          setPanelMove("—", "");
+        } else {
+          lastFen = null;
+          scheduleScan();
+        }
+      }
+    }
+  });
+
   chrome.storage.local.get({ enabled: true, level: "max" }, (v) => {
-    console.info("[Coach amical] storage chargé:", JSON.stringify(v));
     enabled = Boolean(v.enabled);
-    // Normaliser en chaîne : une valeur numérique (1000 in LEVELS est vrai
-    // par coercion de clé) sélectionnerait la mauvaise option.
-    level = String(v.level) in LEVELS ? String(v.level) : "max";
+    level = sfaNormalizeLevel(v.level);
     init();
   });
 })();
