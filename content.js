@@ -11,7 +11,16 @@
   const SCAN_DEBOUNCE_MS = 350;
 
   let enabled = true;
-  let depth = 15;
+
+  // Niveaux de jeu : Skill Level Stockfish (0-20) + profondeur réduite.
+  // Correspondances Elo approximatives (« grosso modo »).
+  const LEVELS = {
+    max: { skill: 20, depth: 15, label: "Maximum" },
+    1600: { skill: 8, depth: 10, label: "~1600 Elo" },
+    1300: { skill: 4, depth: 8, label: "~1300 Elo" },
+    1000: { skill: 1, depth: 5, label: "~1000 Elo" },
+  };
+  let level = "max";
   let lastFen = null; // dernière position analysée (les réponses d'une autre position sont ignorées)
   let panel = null;
   let scanTimer = null;
@@ -229,11 +238,12 @@
         <div class="sfa-move">—</div>
         <div class="sfa-eval"></div>
         <div class="sfa-depth-row">
-          <span>Profondeur</span>
-          <select class="sfa-depth">
-            <option value="12">12 (rapide)</option>
-            <option value="15">15</option>
-            <option value="18">18 (fort)</option>
+          <span>Niveau</span>
+          <select class="sfa-level">
+            <option value="max">Maximum</option>
+            <option value="1600">~1600 Elo</option>
+            <option value="1300">~1300 Elo</option>
+            <option value="1000">~1000 Elo</option>
           </select>
         </div>
       </div>
@@ -257,12 +267,14 @@
     });
     panel.classList.toggle("sfa-off", !enabled);
 
-    const depthSel = panel.querySelector(".sfa-depth");
-    depthSel.value = String(depth);
-    depthSel.addEventListener("change", () => {
-      depth = Number(depthSel.value);
-      chrome.storage.local.set({ depth });
-      lastFen = null;
+    const levelSel = panel.querySelector(".sfa-level");
+    levelSel.value = level;
+    if (levelSel.value !== level) levelSel.selectedIndex = 0; // valeur inconnue → Maximum
+    levelSel.addEventListener("change", (e) => {
+      console.info("[Coach amical] change niveau:", levelSel.value, "isTrusted:", e.isTrusted);
+      level = String(levelSel.value) in LEVELS ? String(levelSel.value) : "max";
+      chrome.storage.local.set({ level });
+      lastFen = null; // force une nouvelle analyse au nouveau niveau
       scheduleScan();
     });
     return panel;
@@ -285,8 +297,9 @@
     lastRequestAt = Date.now();
     awaitingResult = true;
     setPanelMove("…", "analyse en cours");
+    const lv = LEVELS[level] || LEVELS.max;
     chrome.runtime.sendMessage(
-      { target: "background", type: "analyze", fen, depth },
+      { target: "background", type: "analyze", fen, depth: lv.depth, skill: lv.skill },
       (resp) => {
         if (chrome.runtime.lastError) {
           const m = chrome.runtime.lastError.message || "erreur inconnue";
@@ -392,9 +405,12 @@
     scheduleScan();
   }
 
-  chrome.storage.local.get({ enabled: true, depth: 15 }, (v) => {
+  chrome.storage.local.get({ enabled: true, level: "max" }, (v) => {
+    console.info("[Coach amical] storage chargé:", JSON.stringify(v));
     enabled = Boolean(v.enabled);
-    depth = Number(v.depth) || 15;
+    // Normaliser en chaîne : une valeur numérique (1000 in LEVELS est vrai
+    // par coercion de clé) sélectionnerait la mauvaise option.
+    level = String(v.level) in LEVELS ? String(v.level) : "max";
     init();
   });
 })();

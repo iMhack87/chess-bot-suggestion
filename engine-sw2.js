@@ -133,13 +133,24 @@ function onEngineLine(line) {
 
 let uciStarted = false;
 
+// Skill Level courant du moteur (20 = pleine force). Contrairement à
+// Threads/Hash (interdits, voir CLAUDE.md), ce setoption retourne
+// immédiatement — vérifié sous Node. On ne l'envoie que s'il change,
+// moteur au repos (maybeStart garantit busy=false).
+let currentSkill = 20;
+
 function maybeStart() {
   if (!engineReady || busy || !pending) return;
   current = pending;
   pending = null;
   lastInfo = null;
   busy = true;
-  jlog("recherche depth " + current.depth);
+  if (current.skill !== currentSkill) {
+    jlog("skill → " + current.skill);
+    toEngine("setoption name Skill Level value " + current.skill);
+    currentSkill = current.skill;
+  }
+  jlog("recherche depth " + current.depth + " skill " + current.skill);
   toEngine("position fen " + current.fen);
   toEngine("go depth " + current.depth + " movetime " + (current.depth >= 18 ? 4000 : current.depth >= 15 ? 2500 : 1200));
 }
@@ -161,7 +172,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       calledRun: typeof Module !== "undefined" ? !!Module.calledRun : null,
       journal: journal.slice(),
     });
-    pending = { fen: msg.fen, depth: Number(msg.depth) || 15 };
+    pending = {
+      fen: msg.fen,
+      depth: Number(msg.depth) || 15,
+      skill: Math.min(20, Math.max(0, Number(msg.skill) >= 0 ? Number(msg.skill) : 20)),
+    };
     if (!uciStarted) {
       uciStarted = true;
       jlog("uci envoyé");
