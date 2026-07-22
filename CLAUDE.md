@@ -33,6 +33,10 @@ stockfish.asm.js (10, build 2019 lichess, pur JS) et chess.js 0.13.4 patché.
   redémarrage QUE si le manifest a changé → bumper `version` à chaque
   itération. Le script du SW est encore plus têtu : le RENOMMER
   (+ manifest) à chaque modif. Sinon : clic ⟳ dans chrome://extensions.
+- **Une mise à jour de Chrome peut casser la registration du SW** d'une
+  extension non empaquetée (« Receiving end does not exist » permanent,
+  content script OK mais SW jamais démarré — vécu au passage à Chrome 150).
+  Même remède : renommer le fichier du SW + bump version + redémarrage.
 - `setoption name Skill Level` est sûr (retour immédiat), contrairement à
   Threads/Hash. Niveaux Elo : voir LEVELS dans content.js (skill+depth).
 - `vendor/chess.js` est PATCHÉ (builds cdnjs = modules ES → SyntaxError en

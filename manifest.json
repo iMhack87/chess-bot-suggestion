@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Coach Amical — Suggestions Stockfish (chess.com)",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Suggère le meilleur coup avec Stockfish pendant une partie amicale sur chess.com. À utiliser uniquement avec l'accord des deux joueurs.",
   "permissions": [
     "storage"
   ],
   "background": {
-    "service_worker": "engine-sw2.js"
+    "service_worker": "engine-sw3.js"
   },
   "content_scripts": [
     {
